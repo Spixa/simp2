@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <exception>
+#include <string>
 #include <thread>
 #include <functional>
 #include "asio.hpp"
@@ -26,22 +27,20 @@ int main(int argc, char** argv) {
     tcp::resolver::iterator iterator = resolver.resolve(query);
 
     // copy nickname from argv[1] to buffer
-    array<char, simp::MAX_NICKNAME> nickname;
-    strcpy(nickname.data(), argv[1]);
+    std::string name = argv[1];
 
-    auto client =  simp::client_interface::create(nickname, io_service, iterator);
+
+    auto client =  simp::client_interface::create(name, io_service, iterator);
     std::thread t(std::bind((unsigned long int (asio::io_service::*)())&asio::io_service::run, &io_service)); 
-
-    std::array<char, simp::MAX_IP_PACK_SIZE> msg;
 
     while (true)
     {
-      memset(msg.data(), '\0', msg.size());
-      if (!std::cin.getline(msg.data(), simp::MAX_IP_PACK_SIZE - simp::MAX_NICKNAME))
-      {
-        std::cin.clear(); //clean up error bit and try to finish reading
-      }
-      client->write(msg);
+      std::string buffer;
+      std::getline(std::cin, buffer);
+
+      simp::chat_message message;
+      message.set_message(1, {buffer});
+      client->write(message);
     }
   } catch (std::exception& e) {
     std::cout << "e: " << e.what() << std::endl;

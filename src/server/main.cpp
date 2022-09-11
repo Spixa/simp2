@@ -2,6 +2,8 @@
 #include <thread>
 #include "server.hpp"
 
+#include "../common/message.hpp"
+
 int main(int argc, char** argv) {
   try {
     if (argc < 2) {

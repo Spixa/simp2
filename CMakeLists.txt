@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.11)
 set(CMAKE_CXX_STANDARD 20)
+add_compile_options(-g)
 
 project(simp2 VERSION 1.0)
 
@@ -27,5 +28,7 @@ set(SIMPCLIENT_SOURCES
 add_executable(simpserver ${SIMPSERVER_SOURCES})
 add_executable(simpclient ${SIMPCLIENT_SOURCES})
 
-include_directories(${CMAKE_SOURCE_DIR}/src)
+target_include_directories(simpserver PRIVATE ${CMAKE_SOURCE_DIR}/src ${asio_SOURCE_DIR})
+target_include_directories(simpclient PRIVATE ${CMAKE_SOURCE_DIR}/src ${asio_SOURCE_DIR})
+
 link_libraries(asio)
