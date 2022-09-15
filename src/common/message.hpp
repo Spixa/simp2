@@ -1,109 +1,89 @@
 #pragma once
 
-#include <exception>
+#include "common.hpp"
 #include <sstream>
-#include <vector>
-#include <cinttypes>
-#include <array>
-#include <string>
-#include <tuple>
-#include <memory.h>
-#include <iostream>
-
-#include "protocol.hpp"
 
 namespace simp {
-
 namespace {
-void lex(std::array<char, MAX_IP_PACK_SIZE> const& s, uint16_t& id, std::vector<std::string> &v, char lex){
-  std::string temp = "";
+  void lex(std::string const& s, std::vector<std::string> &v, char lex){
+    std::string temp = "";
 
-  int seperator_count{0};
-  for(int i=0;i<s.size();++i){
-    if(s[i]==lex){
-
-      if (seperator_count != 0) 
+    for(int i=0;i<s.size();++i){
+      if(s[i]==lex){
         v.push_back(temp);
-      else { 
-        try {
-          id = std::stoi(temp);
-        } catch(std::exception& e) {
-          id = 1;
-        }
+        temp = "";
       }
-
-      temp = "";
-      seperator_count++;
+      else{
+        temp.push_back(s[i]);
+      }
     }
-    else{
-      temp.push_back(s[i]);
-    }
+    v.push_back(temp);
   }
-  v.push_back(temp);
-}
 }
 
 
-class chat_message {
-public:
-  chat_message() {
-    // packet_.fill('\0');
+template<typename T>
+struct message_header
+{
+  T id;
+  uint32_t size = 0;
+};
+
+
+template<typename T>
+struct message
+{
+  message_header<T> header{};
+  std::vector<uint8_t> body;
+
+  size_t size() const {
+    return  body.size();
   }
 
-  std::array<char, simp::MAX_IP_PACK_SIZE>& get_data() { return packet_; }
-
-  static std::tuple<uint16_t, std::vector<std::string>> decode(std::array<char, MAX_IP_PACK_SIZE> const& msg, char seperator = '\x01') {
-    uint16_t return_id;
-    std::vector<std::string> return_parameters;
-
-    lex(msg, return_id, return_parameters, seperator);
-
-    return std::make_tuple(return_id, return_parameters);
+  friend std::ostream& operator <<(std::ostream& os, const message<T>& msg) {
+    os << "[\n\t{id=" << int(msg.header.id) << "},\n\t{size=" << msg.header.size << "},\n\t{content=\"" << std::string{msg.body.begin(), msg.body.end()} << "\"}\n]";
+    return os;
   }
 
-  static void tidy_print(chat_message o) {
-    auto g = chat_message::decode(o.get_data());
-    
-    std::cout << std::get<uint16_t>(g);
+  void set_content(std::vector<std::string> const& msg) {
 
-    auto v = std::get<std::vector<std::string>>(g);
+    std::stringstream ss;
 
-    for (auto x : v) {
-      std::cout << " -- " << x;
-    }
-    std::cout << std::endl;
-  }
-
-  void set_message(uint16_t pack_id, std::vector<std::string> const& strings, char seperator = '\x01' ) {
-    // std::stringstream ss{std::stringstream::out | std::ios::binary};
-    // ss << pack_id;
-
-    // for (auto x : strings) {
-    //   ss << seperator << x;
-    // }
-
-    // ss.seekg(0, std::ios::end);
-    // int size = ss.tellg();
-    // std::cout << "Size: " << size << std::endl;
-
-    // const auto str = ss.str(); // ss.view() is better on C++20
-
-    std::string str;
-
-    str += std::to_string(pack_id);
-
-    for (auto x : strings) {
-      str += std::string(seperator + x);
+    for (auto x : msg) {
+      ss << x;
+      ss << '\x01';
     }
 
-    std::cout << "string data: [" << str.data() << "] with size: " << str.size() << std::endl;
+    const auto str = ss.str().erase(ss.str().size() - 1, 1);
+    header.size = str.size();
 
-    std::copy(str.begin(), str.end(), packet_.begin());
-    std::cout << "packet data: " << packet_.data() << std::endl;
-
+    std::vector<uint8_t> tmp{str.begin(), str.end()};
+    body = tmp;
   }
-private:
-  std::array<char, MAX_IP_PACK_SIZE> packet_{};
+
+  std::vector<std::string> body_to_string() {
+    std::string str_data{body.begin(), body.end()};
+    std::vector<std::string> ret;
+
+    lex(str_data, ret, '\x01');
+
+    return ret;
+  }
+};
+
+template<typename T>
+class connection;
+
+template<typename T>
+struct owned_message
+{
+  std::shared_ptr<connection<T>> remote = nullptr;
+  message<T> msg;
+
+  friend std::ostream& operator<<(std::ostream& os, const owned_message<T>& msg) {
+    os << msg.msg;
+    return os;
+  }
 };
 
 };

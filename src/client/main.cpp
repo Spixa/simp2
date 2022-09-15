@@ -1,48 +1,61 @@
+#include "../common/message.hpp"
 #include "client.hpp"
-
-#include <cstring>
-#include <exception>
 #include <string>
-#include <thread>
-#include <functional>
-#include "asio.hpp"
 
-int main(int argc, char** argv) {
-  using std::array;
-  using asio::ip::tcp;
-
-  try {
-    if (argc != 4) {
-      std::cerr << "Usage: simpclient <nickname> <host> <port>\n";
-    }
-
-    // io service
-    asio::io_service io_service;
-    tcp::resolver resolver(io_service);
-    
-    // query ip and port
-    tcp::resolver::query query(argv[2], argv[3]);
-
-    // retrieve endpoints
-    tcp::resolver::iterator iterator = resolver.resolve(query);
-
-    // copy nickname from argv[1] to buffer
-    std::string name = argv[1];
-
-
-    auto client =  simp::client_interface::create(name, io_service, iterator);
-    std::thread t(std::bind((unsigned long int (asio::io_service::*)())&asio::io_service::run, &io_service)); 
-
-    while (true)
-    {
-      std::string buffer;
-      std::getline(std::cin, buffer);
-
-      simp::chat_message message;
-      message.set_message(1, {buffer});
-      client->write(message);
-    }
-  } catch (std::exception& e) {
-    std::cout << "e: " << e.what() << std::endl;
+using namespace simp;
+class Client : public simp::client_interface<Packets> {
+public:
+  void message_all(const std::string& data) {
+    simp::message<Packets> msg;
+    msg.header.id = Packets::SendMessagePacket; 
+    msg.set_content({data});
+    send(msg);
   }
+};
+
+
+int main() {
+  Client c;
+  c.connect("127.0.0.1", 37549);
+
+  std::thread write_thread([&c]()
+    {
+      while (c.is_connected()) {
+        std::string buffer;
+        std::getline(std::cin, buffer);
+
+        if (!buffer.empty())
+          c.message_all(buffer);
+      }
+    }
+  );
+
+  while (true) {
+    if (c.is_connected()) {
+      if (!c.incoming().empty()) {
+        auto msg = c.incoming().pop_front().msg;
+
+        switch (msg.header.id) {
+        case Packets::SendMessagePacket: {
+          std::cout <<  msg.body_to_string()[1] << ": '" << msg.body_to_string()[0] << "'\n";
+        }
+        break;
+        case Packets::JoinMessagePacket: {
+          std::cout << msg.body_to_string()[0] << " connected\n";
+        }
+        break;
+        case Packets::LeaveMessagePacket: {
+          std::cout << msg.body_to_string()[0] << " disconnected\n";
+        }
+        break;
+        }
+      }
+    } else {
+      std::cout << "Server is down\n";
+      break;
+    }
+  }
+
+  write_thread.join();
+
 }
