@@ -5,6 +5,10 @@
 #include <asio/io_context.hpp>
 #include <exception>
 
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/ansicolor_sink.h"
+
 namespace simp {
 
 template<typename T>
@@ -25,11 +29,11 @@ public:
       connection_ = std::make_unique<connection<Packets>>(connection<Packets>::owner::client, io_context_, tcp::socket(io_context_), message_in_queue_);
 
       connection_->connect_to_server(endpoints);
-      std::cout << "Succesfully connected to " << host << ":" << int(port) << std::endl;
+      spdlog::info("Succesfully connected to " + host + ":" + std::to_string(int(port)));
 
       io_context_thread_ = std::thread([this](){ io_context_.run(); });
     } catch(std::exception& e) {
-      std::cerr << "Client exception: " << e.what() << std::endl;
+      spdlog::critical("Client exception: " + std::string(e.what()));
       return false;
     }
     return true;

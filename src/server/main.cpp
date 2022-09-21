@@ -9,22 +9,20 @@ public:
 protected:
   bool onClientConnect(std::shared_ptr<connection<Packets>> client) override {
     simp::message<Packets> msg;
-    msg.header.id = Packets::JoinMessagePacket;
-    msg.set_content({std::to_string(client->get_id())});
+    msg.set_content(Packets::JoinMessagePacket, {std::to_string(client->get_id())});
     broadcast(msg, client);
 
     return true;
   }
 
   void onClientDisconnect(std::shared_ptr<connection<Packets>> client) override {
-    
   }
 
   void onMessage(std::shared_ptr<connection<Packets>> client, message<Packets>& msg) override{
-    if (msg.header.id == Packets::SendMessagePacket) {
-      msg.set_content({msg.body_to_string()[0], std::to_string(client->get_id())});
-      broadcast(msg, client);
-      std::cout << msg.body_to_string()[1] << ": '" << msg.body_to_string()[0] << "'\n";
+    if (msg.get_id() == Packets::SendMessagePacket) {
+      msg.set_content(Packets::SendMessagePacket, {msg.decode_message()[0], std::to_string(client->get_id())});
+      broadcast(msg);
+      std::cout << msg.decode_message()[1] << ": '" << msg.decode_message()[0] << "'\n";
       
     }
   }

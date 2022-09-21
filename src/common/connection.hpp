@@ -7,6 +7,11 @@
 #include <sys/ucontext.h>
 #include <system_error>
 
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#include "spdlog/spdlog.h"
+#include "spdlog/logger.h"
+#include "spdlog/sinks/ansicolor_sink.h"
+
 namespace simp {
   using asio::ip::tcp;
   template<typename T>
@@ -44,7 +49,6 @@ namespace simp {
         asio::async_connect(socket_, endpoints,
           [this](std::error_code ec, tcp::endpoint endpoint) {
             if (!ec) {
-              std::cout << "priming read_header\n";
               read_header();
             }
           }
@@ -83,7 +87,7 @@ namespace simp {
   private:
     /* async */ 
     void write_header() {
-      asio::async_write(socket_, asio::buffer(&message_out_queue_.front().header, sizeof(message_header<T>)),
+      asio::async_write(socket_, asio::buffer(&message_out_queue_.front().header, sizeof(message_header)),
         [this](std::error_code ec, std::size_t length) {
           if (!ec) {
             if (message_out_queue_.front().body.size() > 0) {
@@ -96,7 +100,7 @@ namespace simp {
               }
             }
           } else {
-            std::cerr << "Error: {id=" << id_ << "}, {msg=\"failed header write\"}\n";
+            spdlog::critical("Failed header write on " + std::to_string(id_));
             socket_.close();
           }
         }
@@ -114,7 +118,7 @@ namespace simp {
               write_header();
             }
           } else {
-            std::cerr << "Error: {id=" << id_ << "}, {msg=\"failed body write\"}\n";
+            spdlog::critical("Failed body write on " + std::to_string(id_));
             socket_.close();
           }
         }
@@ -124,7 +128,7 @@ namespace simp {
 private: // reading
   /* async */
   void read_header() {
-    asio::async_read(socket_, asio::buffer(&temporary_in_message.header, sizeof(message_header<T>)),
+    asio::async_read(socket_, asio::buffer(&temporary_in_message.header, sizeof(message_header)),
       [this](std::error_code ec, std::size_t length) {
         if (!ec) {
           if (temporary_in_message.header.size > 0) {
@@ -134,7 +138,7 @@ private: // reading
             add_to_incoming_message_queue();
           }
         } else {
-          std::cerr << "Error: {id=" << id_ << "}, {msg=\"failed header read\"}\n";
+          spdlog::critical("Failed header read on " + std::to_string(id_));
           socket_.close();
         }
       }
@@ -148,7 +152,7 @@ private: // reading
         if (!ec) {
           add_to_incoming_message_queue();
         } else {
-          std::cerr << "Error: {id=" << id_ << "}, {msg=\"failed body read\"}\n";
+          spdlog::critical("Failed body read on " + std::to_string(id_));
           socket_.close();
         }
       }
