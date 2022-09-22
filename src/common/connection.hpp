@@ -4,6 +4,8 @@
 #include "message.hpp"
 #include "common.hpp"
 #include <asio/connect.hpp>
+#include <functional>
+#include <memory>
 #include <sys/ucontext.h>
 #include <system_error>
 
@@ -84,6 +86,10 @@ namespace simp {
         }
       );
     }
+
+    void set_fail_callback(std::function<void(std::shared_ptr<connection<T>>)> f) {
+      fail = f;
+    }
   private:
     /* async */ 
     void write_header() {
@@ -101,6 +107,7 @@ namespace simp {
             }
           } else {
             spdlog::critical("Failed header write on " + std::to_string(id_));
+            fail(this->shared_from_this());
             socket_.close();
           }
         }
@@ -119,11 +126,13 @@ namespace simp {
             }
           } else {
             spdlog::critical("Failed body write on " + std::to_string(id_));
+            fail(this->shared_from_this());
             socket_.close();
           }
         }
       );
     }
+
 
 private: // reading
   /* async */
@@ -139,6 +148,7 @@ private: // reading
           }
         } else {
           spdlog::critical("Failed header read on " + std::to_string(id_));
+          fail(this->shared_from_this());
           socket_.close();
         }
       }
@@ -153,6 +163,7 @@ private: // reading
           add_to_incoming_message_queue();
         } else {
           spdlog::critical("Failed body read on " + std::to_string(id_));
+          fail(this->shared_from_this());
           socket_.close();
         }
       }
@@ -169,6 +180,8 @@ private: // reading
     read_header();
   }
 
+
+
   protected:
     tcp::socket socket_;
     asio::io_context& context_;
@@ -178,6 +191,8 @@ private: // reading
 
     owner owner_type_ = owner::server;
     uint32_t id_ = 0;
+
+    std::function<void(std::shared_ptr<connection<T>>)> fail;
 
     message<T> temporary_in_message;
   };

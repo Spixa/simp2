@@ -13,8 +13,13 @@ public:
   server_interface(uint16_t port) 
     : tcp_acceptor_(io_context_, tcp::endpoint(tcp::v4(), port)), port_(port)
   {
-
+    fail_callback_ = std::function<void(std::shared_ptr<connection<Packets>>)> {
+      [this](std::shared_ptr<connection<Packets>> c){
+        onClientDisconnect(c);
+      }
+    };    
   }
+
 
   virtual ~server_interface() {
     stop();
@@ -52,13 +57,16 @@ public:
             std::make_shared<connection<Packets>>(connection<Packets>::owner::server,
             io_context_, std::move(socket), message_in_queue_);
           
-          if (onClientConnect(newconn)) {
-            connections_.push_back(std::move(newconn));
-            connections_.back()->connect_to_client(id_counter++);
 
+          connections_.push_back(std::move(newconn));
+          connections_.back()->set_fail_callback(fail_callback_);
+          connections_.back()->connect_to_client(id_counter++);
+
+          if (onClientConnect(connections_.back())) {
             std::cout << "[SERVER] Connection approved: " << connections_.back()->get_id() << "\n\tTODO: Handshake\n"; 
           } else {
             std::cout << "[SERVER] Previous connection denied\n";
+            connections_.pop_back();
           }
         } else {
           std::cerr << "Error: {new_connection_error}\n";
@@ -73,7 +81,6 @@ public:
     if (client && client->is_connected()) {
       client->send(msg);
     } else {
-      onClientDisconnect(client);
       client.reset();
 
       connections_.erase(std::remove(connections_.begin(), connections_.end(), client), connections_.end());
@@ -89,7 +96,6 @@ public:
           client->send(msg);
         }
       } else {
-        onClientDisconnect(client);
         client.reset();
         invalid_client_exists = true;
       }
@@ -132,6 +138,7 @@ private:
   uint16_t port_;
 
   tcp::acceptor tcp_acceptor_;
+  std::function<void(std::shared_ptr<connection<Packets>>)> fail_callback_;
 
   uint32_t id_counter = 0;
 };

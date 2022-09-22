@@ -1,8 +1,13 @@
 #pragma once
 
-#include "common.hpp"
+#include "aes.hpp"
+#include "simp_protocol.hpp"
 #include <cassert>
+#include <exception>
+#include <vector>
 #include <sstream>
+#include <iostream>
+#include <string>;
 
 namespace simp {
 namespace {
@@ -44,7 +49,7 @@ struct message
     return os;
   }
 
-  void set_content(T id, std::vector<std::string> const& msg) {
+  void set_content(T id, std::vector<std::string> const& msg, bool shouldEncrypt = true) {
     std::stringstream ss;
     
     // Write the ID onto the stringstream
@@ -61,17 +66,26 @@ struct message
     header.size = str.size();
 
     // begin writing message to a temporary byte vector
-    std::vector<uint8_t> tmp{str.begin(), str.end()};
 
-    // Copy to the main body
-    body = tmp;
+
+    if (shouldEncrypt) {
+      // Encrypt
+      auto tmp = cipher::Aes::encrypt(str, simp::key);
+      body = std::vector<uint8_t>{tmp.begin(), tmp.end()};
+      header.size = body.size();
+    } else {
+      // Copy to the main body
+      std::vector<uint8_t> tmp{str.begin(), str.end()};
+      body = tmp;
+    }
   }
+
 
   /*
   This function gets the message ID which can be accessed with message::get_id() method
   And also returns a vector of string used to retrieve single messages
   */
-  std::vector<std::string> decode_message() {
+  std::vector<std::string> decode_message(bool shouldDecrypt = true) {
     // Used for assertion later on
     hasBodyDecoded = true;
 
@@ -81,14 +95,23 @@ struct message
     // Return value
     std::vector<std::string> ret;
 
-    // Lex data for each \x01 from str_data and write it to the ret vec
-    lex(str_data, ret, '\x01');
-    
-    // retrieve the ID and downcast it to uint32_t
-    id = std::atoi(ret.begin().base()->data());
-    // Remove the ID from the vector
-    ret.erase(ret.begin());
-    
+    if (shouldDecrypt) {
+      auto decoded = cipher::Aes::decrypt(secure_vector<uint8_t>(str_data.begin(), str_data.end()), simp::key);
+      auto decoded_msg = decoded["msg"];
+      str_data = std::string(decoded_msg.begin(), decoded_msg.end()); 
+    }
+
+    try {
+      // Lex data for each \x01 from str_data and write it to the ret vec
+      lex(str_data, ret, '\x01');
+      
+      // retrieve the ID and downcast it to uint32_t
+      id = std::atoi(ret.begin().base()->data());
+      // Remove the ID from the vector
+      ret.erase(ret.begin());
+    } catch(std::exception const& e) {
+      std::cout << "Decoding message error: " << e.what() << std::endl;
+    }
     return ret;
   }
 

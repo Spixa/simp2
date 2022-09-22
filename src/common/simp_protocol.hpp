@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cinttypes>
+#include <string>
 
 namespace simp {
   enum class Packets : uint32_t {
@@ -20,4 +21,6 @@ namespace simp {
     DisconnectUnnamed = 2,
     DisconnectSpam = 3
   };
+
+  static constexpr const char *const key = "2B7E151628AED2A6ABF7158809CF4F3C2B7E151628AED2A6ABF7158809CF4F3C";
 };
