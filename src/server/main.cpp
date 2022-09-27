@@ -16,6 +16,20 @@ protected:
                     {std::to_string(client->get_id())});
     broadcast(msg, client);
 
+    std::stringstream oss;
+    oss << decryptor.get()->public_key();
+
+    const auto pubkey = oss.str();
+
+    std::cout << "pubkey: " << pubkey << std::endl;
+    msg.body = std::vector<uint8_t>(pubkey.begin(), pubkey.end());
+    msg.header.size = msg.body.size();
+
+    std::cout << "Header size:\n " << int(msg.header.size) << std::endl;
+
+    message_client(client, msg);
+    client->auth = connection<Packets>::AuthState::ModuloSent;
+
     return true;
   }
 
@@ -30,6 +44,45 @@ protected:
 
   void onMessage(std::shared_ptr<connection<Packets>> client,
                  message<Packets> &msg) override {
+    if (client->auth == connection<Packets>::AuthState::ModuloSent) {
+      secure_vector<uint8_t> cryptic_msg;
+
+      for (auto x : msg.body) {
+        cryptic_msg.push_back(x);
+      }
+
+      secure_vector<uint8_t> msg_body;
+      try {
+        msg_body = decryptor.get()->decrypt(cryptic_msg);
+      } catch (Botan::Decoding_Error const &error) {
+        std::cout << "Couldn't decode auth info from client.\n";
+        client->disconnect();
+        return;
+      }
+
+      client->auth = connection<Packets>::AuthState::AuthReceived;
+      return;
+    }
+
+    if (client->auth == connection<Packets>::AuthState::AuthReceived) {
+      BigInt key = BigInt(std::string(reinterpret_cast<char *>(msg.body.data()),
+                                      msg.header.size));
+      encryptor.get()->new_key(client->get_id(), key);
+      std::cout << "Successfully added client key\n";
+
+      auto msg_body = encryptor.get()->encrypt(client->get_id(), simp::key);
+      simp::message<Packets> kmsg;
+
+      for (auto x : msg_body) {
+        kmsg.body.push_back(x);
+      }
+
+      kmsg.header.size = kmsg.body.size();
+      message_client(client, kmsg);
+      client->auth = connection<Packets>::AuthState::AesKeySent;
+
+      return;
+    }
     if (msg.get_id() == Packets::SendMessagePacket) {
       msg.set_content(
           Packets::SendMessagePacket,

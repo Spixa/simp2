@@ -170,7 +170,7 @@ private: // reading
     );
   }
 
-  void add_to_incoming_message_queue() {
+  virtual void add_to_incoming_message_queue() {
     if (owner_type_ == owner::server) {
       message_in_queue_.push_back({ this->shared_from_this(), temporary_in_message});
     } else {

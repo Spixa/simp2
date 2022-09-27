@@ -14,7 +14,7 @@ rsa_decryptor::rsa_decryptor()
 
 BigInt rsa_decryptor::public_key() { return pk.get()->get_n(); }
 
-rsa_decryptor::bytes decrypt(rsa_decryptor::bytes input) {
+rsa_decryptor::bytes rsa_decryptor::decrypt(rsa_decryptor::bytes input) {
   PK_Decryptor_EME decryption_device(*pk, rng, "PKCS1v15");
 
   return decryption_device.decrypt(input);

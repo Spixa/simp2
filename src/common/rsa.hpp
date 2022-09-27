@@ -55,7 +55,7 @@ public:
   rsa_encryptor &operator=(const rsa_encryptor &other) = delete;
   virtual ~rsa_encryptor() {}
 
-  rsa_encryptor::ptr create();
+  static rsa_encryptor::ptr create();
 
 public:
   std::vector<uint8_t> encrypt(uint32_t id, std::string const &plaintext);

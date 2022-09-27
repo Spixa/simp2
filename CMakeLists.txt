@@ -88,6 +88,7 @@ link_directories(${SPDLOG_LIB}/lib)
 # Sources
 set(COMMON_SOURCES
   ${CMAKE_SOURCE_DIR}//src/common/aes.cpp
+  ${CMAKE_SOURCE_DIR}/src/common/rsa.cpp
 )
 set(SIMPSERVER_SOURCES
   ${CMAKE_SOURCE_DIR}/src/server/main.cpp
