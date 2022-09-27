@@ -53,6 +53,9 @@
 
 using namespace simp;
 using namespace simp::cipher;
+
+std::string aeskey;
+
 class Client : public simp::client_interface<Packets> {
 public:
   Client() : client_interface<Packets>() {
@@ -62,7 +65,7 @@ public:
 
   void message_all(const std::string &data, const std::string &aes = "") {
     simp::message<Packets> msg;
-    msg.set_content(Packets::SendMessagePacket, {data});
+    msg.set_content(Packets::SendMessagePacket, {data}, aeskey);
     send(msg);
   }
 
@@ -162,17 +165,16 @@ int main() {
             c.disconnect();
             continue;
           }
-
-          std::cout << "aes key: ";
+          
           for (auto x : aes_key_buf) {
-            std::cout << x;
+            aeskey += x;
           }
           c.auth_state = Client::AuthState::ReceivedAesKey;
 
           continue;
         }
 
-        auto x = msg.decode_message();
+        auto x = msg.decode_message(aeskey.data());
 
         switch (msg.get_id()) {
         case Packets::SendMessagePacket: {

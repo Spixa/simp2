@@ -4,6 +4,7 @@
 #include "../common/simp_protocol.hpp"
 #include "server_connection.hpp"
 
+// #include <spdlog/spdlog.hpp>
 #include <memory>
 #include <thread>
 
@@ -51,8 +52,9 @@ public:
   void await_clients() {
     tcp_acceptor_.async_accept([this](std::error_code ec, tcp::socket socket) {
       if (!ec) {
-        std::cout << "[TCP] New connection: " << socket.remote_endpoint()
-                  << "\n";
+        std::stringstream sock;
+        sock << socket.remote_endpoint();
+        spdlog::get("auth")->info("Connection: " + sock.str());
 
         std::shared_ptr<connection<Packets>> newconn =
             std::make_shared<connection<Packets>>(
@@ -64,14 +66,13 @@ public:
         connections_.back()->connect_to_client(id_counter++);
 
         if (onClientConnect(connections_.back())) {
-          std::cout << "[SERVER] Connection approved: "
-                    << connections_.back()->get_id() << "\n\tTODO: Handshake\n";
+          spdlog::get("auth")->info("Connection approved");
         } else {
-          std::cout << "[SERVER] Previous connection denied\n";
+          spdlog::get("auth")->info("Connection declined");
           connections_.pop_back();
         }
       } else {
-        std::cerr << "Error: {new_connection_error}\n";
+        spdlog::get("auth")->error("New connection error");
       }
 
       await_clients();
@@ -98,7 +99,7 @@ public:
     for (auto &client : connections_) {
       if (client && client->is_connected()) {
         if (client != ignore_client &&
-            client->auth == connection<Packets>::AuthState::Authenticated) {
+            client->auth == connection<Packets>::AuthState::AesKeySent) {
           client->send(msg);
         }
       } else {

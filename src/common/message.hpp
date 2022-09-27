@@ -4,54 +4,57 @@
 #include "simp_protocol.hpp"
 #include <cassert>
 #include <exception>
-#include <vector>
-#include <sstream>
 #include <iostream>
+#include <sstream>
 #include <string>
+#include <vector>
 
 namespace simp {
 namespace {
-  void lex(std::string const& s, std::vector<std::string> &v, char lex){
-    std::string temp = "";
+void lex(std::string const &s, std::vector<std::string> &v, char lex) {
+  std::string temp = "";
 
-    for(int i=0;i<s.size();++i){
-      if(s[i]==lex){
-        v.push_back(temp);
-        temp = "";
-      }
-      else{
-        temp.push_back(s[i]);
-      }
+  for (int i = 0; i < s.size(); ++i) {
+    if (s[i] == lex) {
+      v.push_back(temp);
+      temp = "";
+    } else {
+      temp.push_back(s[i]);
     }
-    v.push_back(temp);
+  }
+  v.push_back(temp);
+}
+} // namespace
+
+namespace text {
+  namespace engine {
+    void simplex(std::string const& s, std::vector<std::string> &v, char lexer) {
+      lex(s, v, lexer);
+    }
   }
 }
 
-
-struct message_header
-{
+struct message_header {
   uint32_t size = 0;
 };
 
-
-template<typename T>
-struct message
-{
+template <typename T> struct message {
   message_header header{};
   std::vector<uint8_t> body;
 
-  size_t size() const {
-    return  body.size();
-  }
+  size_t size() const { return body.size(); }
 
-  friend std::ostream& operator <<(std::ostream& os, const message<T>& msg) {
-    os << "[\n\t{id=" << int(msg.id) << "},\n\t{size=" << msg.header.size << "},\n\t{content=\"" << std::string{msg.body.begin(), msg.body.end()} << "\"}\n]";
+  friend std::ostream &operator<<(std::ostream &os, const message<T> &msg) {
+    os << "[\n\t{id=" << int(msg.id) << "},\n\t{size=" << msg.header.size
+       << "},\n\t{content=\"" << std::string{msg.body.begin(), msg.body.end()}
+       << "\"}\n]";
     return os;
   }
 
-  void set_content(T id, std::vector<std::string> const& msg, bool shouldEncrypt = true) {
+  void set_content(T id, std::vector<std::string> const &msg,
+                   std::string const &aeskey, bool shouldEncrypt = true) {
     std::stringstream ss;
-    
+
     // Write the ID onto the stringstream
     ss << static_cast<uint32_t>(id);
 
@@ -67,10 +70,9 @@ struct message
 
     // begin writing message to a temporary byte vector
 
-
     if (shouldEncrypt) {
       // Encrypt
-      auto tmp = cipher::Aes::encrypt(str, simp::key);
+      auto tmp = cipher::Aes::encrypt(str, aeskey.data());
       body = std::vector<uint8_t>{tmp.begin(), tmp.end()};
       header.size = body.size();
     } else {
@@ -80,12 +82,12 @@ struct message
     }
   }
 
-
   /*
-  This function gets the message ID which can be accessed with message::get_id() method
-  And also returns a vector of string used to retrieve single messages
+  This function gets the message ID which can be accessed with message::get_id()
+  method And also returns a vector of string used to retrieve single messages
   */
-  std::vector<std::string> decode_message(bool shouldDecrypt = true) {
+  std::vector<std::string> decode_message(std::string const &aeskey,
+                                          bool shouldDecrypt = true) {
     // Used for assertion later on
     hasBodyDecoded = true;
 
@@ -96,20 +98,22 @@ struct message
     std::vector<std::string> ret;
 
     if (shouldDecrypt) {
-      auto decoded = cipher::Aes::decrypt(secure_vector<uint8_t>(str_data.begin(), str_data.end()), simp::key);
+      auto decoded = cipher::Aes::decrypt(
+          secure_vector<uint8_t>(str_data.begin(), str_data.end()),
+          aeskey.data());
       auto decoded_msg = decoded["msg"];
-      str_data = std::string(decoded_msg.begin(), decoded_msg.end()); 
+      str_data = std::string(decoded_msg.begin(), decoded_msg.end());
     }
 
     try {
       // Lex data for each \x01 from str_data and write it to the ret vec
       lex(str_data, ret, '\x01');
-      
+
       // retrieve the ID and downcast it to uint32_t
       id = std::atoi(ret.begin().base()->data());
       // Remove the ID from the vector
       ret.erase(ret.begin());
-    } catch(std::exception const& e) {
+    } catch (std::exception const &e) {
       std::cout << "Decoding message error: " << e.what() << std::endl;
     }
     return ret;
@@ -121,26 +125,23 @@ struct message
 
     return static_cast<T>(id);
   }
+
 private:
   bool hasBodyDecoded = false;
   uint32_t id{};
 };
 
-template<typename T>
-class connection;
+template <typename T> class connection;
 
-template<typename T>
-struct owned_message
-{
+template <typename T> struct owned_message {
   std::shared_ptr<connection<T>> remote = nullptr;
   message<T> msg;
 
-  friend std::ostream& operator<<(std::ostream& os, const owned_message<T>& msg) {
+  friend std::ostream &operator<<(std::ostream &os,
+                                  const owned_message<T> &msg) {
     os << msg.msg;
     return os;
   }
 };
 
-
-
-};
+}; // namespace simp

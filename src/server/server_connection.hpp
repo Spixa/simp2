@@ -89,6 +89,8 @@ public:
     Authenticated
   } auth = AuthState::Unauthenticated;
 
+  std::string uname;
+
 private:
   /* async */
   void write_header() {
