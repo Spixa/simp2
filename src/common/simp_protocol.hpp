@@ -22,5 +22,5 @@ namespace simp {
     DisconnectSpam = 3
   };
 
-  
+  const static std::string OPENSIMP_VERSION = "2"; 
 };

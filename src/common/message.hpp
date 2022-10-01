@@ -10,7 +10,7 @@
 #include <vector>
 
 namespace simp {
-namespace {
+
 void lex(std::string const &s, std::vector<std::string> &v, char lex) {
   std::string temp = "";
 
@@ -24,15 +24,7 @@ void lex(std::string const &s, std::vector<std::string> &v, char lex) {
   }
   v.push_back(temp);
 }
-} // namespace
 
-namespace text {
-  namespace engine {
-    void simplex(std::string const& s, std::vector<std::string> &v, char lexer) {
-      lex(s, v, lexer);
-    }
-  }
-}
 
 struct message_header {
   uint32_t size = 0;

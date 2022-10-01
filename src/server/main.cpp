@@ -1,7 +1,7 @@
 #include "server.hpp"
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <string>
-#include <spdlog/sinks/stdout_color_sinks.h>
 #include <tinyxml2.h>
 
 using namespace simp;
@@ -62,10 +62,12 @@ protected:
       auto tmp = std::string(msg_body.begin(), msg_body.end());
 
       std::vector<std::string> credientials;
-      text::engine::simplex(tmp, credientials, '\x01');
+      simp::lex(tmp, credientials, '\x01');
 
       client->uname = credientials[0];
-      spdlog::get("auth")->info(credientials[0] + " (" + std::to_string(client.get()->get_id()) + ") is authenticated");
+      spdlog::get("auth")->info(credientials[0] + " (" +
+                                std::to_string(client.get()->get_id()) +
+                                ") is authenticated");
 
       client->auth = connection<Packets>::AuthState::AuthReceived;
       return;
@@ -91,31 +93,69 @@ protected:
       return;
     }
     if (msg.get_id() == Packets::SendMessagePacket) {
-      msg.set_content(
-          Packets::SendMessagePacket,
-          {msg.decode_message(key)[0], client->uname}, key);
+      msg.set_content(Packets::SendMessagePacket,
+                      {msg.decode_message(key)[0], client->uname}, key);
       broadcast(msg);
-      
-      spdlog::get("incoming")->info(msg.decode_message(key)[1] + ": '"
-                + msg.decode_message(key)[0] + "'");
+
+      spdlog::get("incoming")
+          ->info(msg.decode_message(key)[1] + ": '" +
+                 msg.decode_message(key)[0] + "'");
     }
   }
 };
 
+void setup_logger();
+int handle_args(int argc, char** argv, uint16_t& port, std::string& version, std::string& name);
+
 int main(int argc, char **argv) {
+  setup_logger();
+
+  uint16_t server_port;
+  std::string name, version;
   
+  int hand_args = handle_args(argc, argv, server_port, version, name);
+  if (hand_args != 0) return hand_args;
+
+  spdlog::info("Starting: " + name);
+
+  Server s{server_port};
+  s.start();
+
+  while (true) {
+    s.update();
+  }
+}
+
+void setup_logger() {
   auto console = spdlog::stdout_color_mt("console");
   auto incoming = spdlog::stdout_color_mt("incoming");
+  // incoming->set_pattern("%^Incoming%$ [%H:%M:%S %z] %v");
+
   auto auth = spdlog::stdout_color_mt("auth");
   spdlog::set_default_logger(console);
   spdlog::set_pattern("%^%L%$ [%H:%M:%S %z] (%n) > %v");
-  
-  if (argc == 1) {
-    spdlog::error("Usage: " + std::string(argv[0]) + " <server.xml>");
+}
+
+int handle_args(int argc, char** argv, uint16_t& port, std::string& version, std::string& name) {
+  std::deque<std::string> args{argv, argv+argc};
+  std::cout << "size is : " << args.size() << std::endl;
+
+  if (args.size() <= 2) {
+    spdlog::error("Usage: " + args[0] + " <run/create> <server.xml>");
     return -1;
   }
 
-  std::string path = argv[1];
+  if (args[1] == "create") {
+    spdlog::error("Subcommand create is currently not implemented");
+    return EXIT_FAILURE;
+  } else if (args[1] == "run") { spdlog::info("Attempting run"); }
+  else {
+    spdlog::error("Subcommand " + args[1] + " not found");
+    spdlog::error("Usage: " + args[0] + " <run/create> <server.xml>");
+    return -10;
+  }
+
+  std::string path = args[2];
   tinyxml2::XMLDocument document;
   tinyxml2::XMLError result = document.LoadFile(path.data());
 
@@ -159,19 +199,26 @@ int main(int argc, char **argv) {
   tinyxml2::XMLNode *encryption_mode =
       protocol->FirstChildElement("encryption");
   if (encryption_mode == nullptr) {
-    spdlog::warn(path
-              + ": it is advised to add encryption node for next versions.");
+    spdlog::warn(path +
+                 ": it is advised to add encryption node for next versions.");
   }
 
-  uint16_t port = std::atoi(port_node->ToElement()->GetText());
-  std::string v = protocol_version->ToElement()->GetText();
-  std::string n = server_name->ToElement()->GetText();
+  port = std::atoi(port_node->ToElement()->GetText());
+  version = protocol_version->ToElement()->GetText();
+  name = server_name->ToElement()->GetText();
 
-  spdlog::info("Starting server...");
-  Server s{port};
-  s.start();
+  spdlog::info("Checking profile's requested protocol version...");
 
-  while (true) {
-    s.update();
+  if (version != simp::OPENSIMP_VERSION) {
+    spdlog::error("Protocol version requested (v" + version + ") is not supported by openSIMP protocol v" + simp::OPENSIMP_VERSION);
+    
+    if (version.find(".") != std::string::npos) {
+      spdlog::warn("It seems the profile used decimal points for protocol version (.), it should be noted that the protocol versions are in integers");
+    }
+    return -8;
   }
+
+  spdlog::info("Protocol version (v" + version + ") is supported!");
+
+  return 0;
 }

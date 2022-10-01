@@ -99,19 +99,32 @@ int main() {
   // }
   // spdlog::set_default_logger(ostream_logger);
 
+  std::string uname, passwd, ip, port;
+  std::cout << "Enter username:    ";
+  std::getline(std::cin, uname);
+  std::cout << "Enter password:    ";
+  std::getline(std::cin, passwd);
+  std::cout << "Enter server IP:   ";
+  std::getline(std::cin, ip);
+  std::cout << "Enter server port: ";
+  std::getline(std::cin, port);
+
   Client c;
-  c.connect("127.0.0.1", 37549);
+  c.connect(ip, std::stoi(port));
 
   std::thread send_thread([&c] {
     while (c.is_connected()) {
       std::string buf;
       std::getline(std::cin, buf);
 
-      c.message_all(buf);
+      if (c.auth_state == Client::AuthState::ReceivedAesKey) {
+        c.message_all(buf);
+      }
     }
   });
 
   while (true) {
+
     if (c.is_connected()) {
 
       if (!c.incoming().empty()) {
@@ -127,7 +140,7 @@ int main() {
           c.auth_state = Client::AuthState::GotServerModulo;
 
           simp::message<Packets> cred, pubkey;
-          auto credits = c.e->encrypt(0, "spixa\x01spixa1937");
+          auto credits = c.e->encrypt(0, uname + "\x01" + passwd);
 
           for (auto x : credits) {
             cred.body.push_back(x);
@@ -165,7 +178,7 @@ int main() {
             c.disconnect();
             continue;
           }
-          
+
           for (auto x : aes_key_buf) {
             aeskey += x;
           }

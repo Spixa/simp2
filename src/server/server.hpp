@@ -7,6 +7,7 @@
 // #include <spdlog/spdlog.hpp>
 #include <memory>
 #include <thread>
+#include <string>
 
 namespace simp {
 
@@ -31,12 +32,16 @@ public:
       await_clients();
       io_context_thread_ = std::thread([this]() { io_context_.run(); });
     } catch (std::exception &e) {
-      std::cerr << "Exception: " << e.what() << std::endl;
+      spdlog::get("console")->info("Exception: " + std::string(e.what()));
       return false;
     }
 
-    std::cout << "Server started.\n\tthread=" << std::this_thread::get_id()
-              << " tcp=v4 port=" << port_ << std::endl;
+    spdlog::info("Simp Server has begun on port " + std::to_string(port_));
+    
+    std::stringstream thrId;
+    thrId << std::this_thread::get_id();
+
+    spdlog::debug("thread: {}", thrId.str());
     return true;
   }
 

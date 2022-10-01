@@ -80,6 +80,7 @@ public:
     fail = f;
   }
 
+public:
   enum class AuthState {
     Unauthenticated,
     ModuloSent,
@@ -90,7 +91,7 @@ public:
   } auth = AuthState::Unauthenticated;
 
   std::string uname;
-
+  bool is_op = false;
 private:
   /* async */
   void write_header() {

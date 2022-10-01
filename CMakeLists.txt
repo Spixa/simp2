@@ -48,35 +48,27 @@ set(tinyxml2_LIBRARIES tinyxml2)
 
 # ----------------------------------------------------------
 # ASIO
-FetchContent_Declare(asio-cmake
-  GIT_REPOSITORY https://github.com/kingsamchen/asio-cmake.git
-  GIT_TAG        origin/master
-)
-set(ASIO_CMAKE_ASIO_TAG asio-1-12-2)
-FetchContent_MakeAvailable(asio-cmake)
+# FetchContent_Declare(asio-cmake
+#   GIT_REPOSITORY https://github.com/kingsamchen/asio-cmake.git
+#   GIT_TAG        origin/master
+# )
+# set(ASIO_CMAKE_ASIO_TAG asio-1-12-2)
+# FetchContent_MakeAvailable(asio-cmake)
 
 # ----------------------------------------------------------
 # A fast and simple to use logging library.
-FetchContent_Declare(
-  spdlog
-  GIT_REPOSITORY https://github.com/gabime/spdlog.git
-  GIT_TAG        v1.8.2)
-
-FetchContent_GetProperties(spdlog)
-if(NOT spdlog_POPULATED)
-  message("Cloning spdlog...")
-  FetchContent_Populate(spdlog)
-  add_subdirectory(
-    ${spdlog_SOURCE_DIR}
-    ${spdlog_BINARY_DIR})
-endif()
-
 
 
 # ----------------------------------------------------------
 # Project definition
 project(simp2 VERSION 1.0)
 # add_definitions(-std=c++17 -std=gnu++17)
+
+if(NOT TARGET spdlog)
+    # Stand-alone build
+    find_package(spdlog REQUIRED)
+endif()
+
 
 # ----------------------------------------------------------
 # Required packages
@@ -92,6 +84,7 @@ set(COMMON_SOURCES
 )
 set(SIMPSERVER_SOURCES
   ${CMAKE_SOURCE_DIR}/src/server/main.cpp
+  ${CMAKE_SOURCE_DIR}/src/server/server.cpp
 )
 
 set(SIMPCLIENT_SOURCES
@@ -114,7 +107,7 @@ target_include_directories(simpclient PUBLIC ${CMAKE_SOURCE_DIR}/src ${asio_SOUR
 # Linkage
 target_link_libraries(simpserver PRIVATE ${tinxyml2_LIBRARIES} tinyxml2 ${BOTAN_LIBRARY})
 target_link_libraries(simpclient PRIVATE ${tinxyml2_LIBRARIES} tinyxml2 ${BOTAN_LIBRARY})
-link_libraries(asio spdlog ${tinyxml2_LIBRARIES})
+link_libraries(asio spdlog:::spdlog ${tinyxml2_LIBRARIES})
 
 # add_custom_command(TARGET simpserver POST_BUILD        # Adds a post-build event to MyTest
 #     COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
