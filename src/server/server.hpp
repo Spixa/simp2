@@ -51,7 +51,7 @@ public:
     if (io_context_thread_.joinable())
       io_context_thread_.join();
 
-    std::cout << "Server stopped normally.\n";
+    spdlog::info("Server stopped normally.");
   }
 
   void await_clients() {

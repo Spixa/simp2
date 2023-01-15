@@ -63,9 +63,16 @@ public:
     d = rsa::rsa_decryptor::create();
   }
 
-  void message_all(const std::string &data, const std::string &aes = "") {
+  void message_all(const std::string &data) {
     simp::message<Packets> msg;
     msg.set_content(Packets::SendMessagePacket, {data}, aeskey);
+    send(msg);
+  }
+
+  void send_command(std::string const& command) {
+    simp::message<Packets> msg;
+    msg.set_content(Packets::CommandResponsePacket, {command}, aeskey);
+
     send(msg);
   }
 
@@ -118,7 +125,12 @@ int main() {
       std::getline(std::cin, buf);
 
       if (c.auth_state == Client::AuthState::ReceivedAesKey) {
-        c.message_all(buf);
+        if (buf[0] != '/')
+          c.message_all(buf);
+        else {
+          c.send_command(buf);
+          spdlog::info("Sending command: " + buf);
+        }
       }
     }
   });
@@ -149,7 +161,7 @@ int main() {
           cred.header.size = cred.body.size();
 
           c.send(cred);
-          std::cout << "Sent credientials\n";
+          spdlog::info("Sent credientials");
           c.auth_state = Client::AuthState::SentAuth;
 
           std::stringstream oss;
@@ -159,7 +171,7 @@ int main() {
           pubkey.header.size = msg.body.size();
 
           c.send(pubkey);
-          std::cout << "Sent pubkey\n";
+          spdlog::info("Sent pubkey");
           c.auth_state = Client::AuthState::ModuloSent;
           continue;
         }
@@ -174,7 +186,7 @@ int main() {
           try {
             aes_key_buf = c.d.get()->decrypt(ciphertext);
           } catch (Botan::Decoding_Error const &error) {
-            std::cout << "Couldn't decode AES key from server\n";
+            spdlog::error("Couldn't decode AES key from server");
             c.disconnect();
             continue;
           }
@@ -199,6 +211,9 @@ int main() {
         case Packets::LeaveMessagePacket: {
           spdlog::info(x[0] + " disconnected");
         } break;
+        case Packets::CommandResponsePacket: {
+          spdlog::info("Command response: " + x[0]);
+        }
         default: {
 
         } break;

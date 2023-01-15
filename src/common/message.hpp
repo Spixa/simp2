@@ -46,7 +46,7 @@ template <typename T> struct message {
   void set_content(T id, std::vector<std::string> const &msg,
                    std::string const &aeskey, bool shouldEncrypt = true) {
     std::stringstream ss;
-
+    // std::cout << "id is: " << std::to_string(int(id)) << "\n";
     // Write the ID onto the stringstream
     ss << static_cast<uint32_t>(id);
 
