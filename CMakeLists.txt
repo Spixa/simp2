@@ -5,21 +5,25 @@ cmake_minimum_required(VERSION 3.11)
 # Licensed under {PLACEHOLDER_LICENSE_NAME}
 # ----------------------------------------------------------
 
+project(simp2 VERSION 1.0)
+# add_definitions(-std=c++20 -std=gnu++20)
+
 # ----------------------------------------------------------
 # Encryption library
-# include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
-# ExternalProject_Add(botan
-#     GIT_REPOSITORY https://github.com/randombit/botan.git
-#     CONFIGURE_COMMAND python ${CMAKE_SOURCE_DIR}/build/botan-prefix/src/botan/configure.py --prefix=.
-#     BUILD_COMMAND make
-# 		UPDATE_COMMAND ""
-# )
-# ExternalProject_Get_Property(botan INSTALL_DIR)
-# set(BOTAN_LIB ${INSTALL_DIR})
+include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
+ExternalProject_Add(BOTAN
+    GIT_REPOSITORY https://github.com/randombit/botan.git
+    GIT_TAG 2.19.2
+    CONFIGURE_COMMAND python ${CMAKE_SOURCE_DIR}/build/BOTAN-prefix/src/BOTAN/configure.py --prefix=.
+    BUILD_COMMAND "make"
+		UPDATE_COMMAND ""
+)
+ExternalProject_Get_Property(BOTAN INSTALL_DIR)
+set(BOTAN_LIB ${INSTALL_DIR})
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/Modules)
 
-find_package(BOTAN QUIET)
+# find_package(BOTAN QUIET)
 
 include(FetchContent)
 # ----------------------------------------------------------
@@ -61,8 +65,7 @@ set(tinyxml2_LIBRARIES tinyxml2)
 
 # ----------------------------------------------------------
 # Project definition
-project(simp2 VERSION 1.0)
-# add_definitions(-std=c++17 -std=gnu++17)
+
 
 if(NOT TARGET spdlog)
     # Stand-alone build
@@ -97,7 +100,8 @@ set(SIMPCLIENT_SOURCES
 add_executable(simpserver ${SIMPSERVER_SOURCES} ${COMMON_SOURCES})
 add_executable(simpclient ${SIMPCLIENT_SOURCES} ${COMMON_SOURCES})
 
-link_directories(${BOTAN_LIB})
+link_directories(${BOTAN_LIB}/lib)
+include_directories(${BOTAN_LIB}/src/BOTAN-build/include/botan-3 ${SFML_LIB}/include)
 
 # ----------------------------------------------------------
 # Include sources
