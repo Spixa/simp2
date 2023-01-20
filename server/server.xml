@@ -5,4 +5,5 @@
   <protocol>
     <version>2</version>
   </protocol>
+  <db users=""/>
 </server>

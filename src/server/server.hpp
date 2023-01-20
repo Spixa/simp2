@@ -16,10 +16,6 @@ public:
   server_interface(uint16_t port)
       : tcp_acceptor_(io_context_, tcp::endpoint(tcp::v4(), port)),
         port_(port) {
-    fail_callback_ = std::function<void(std::shared_ptr<connection<Packets>>)>{
-        [this](std::shared_ptr<connection<Packets>> c) {
-          onClientDisconnect(c);
-        }};
   }
 
   virtual ~server_interface() { stop(); }
@@ -67,7 +63,6 @@ public:
                 std::move(socket), message_in_queue_);
 
         connections_.push_back(std::move(newconn));
-        connections_.back()->set_fail_callback(fail_callback_);
         connections_.back()->connect_to_client(id_counter++);
 
         if (onClientConnect(connections_.back())) {
@@ -89,6 +84,7 @@ public:
     if (client && client->is_connected()) {
       client->send(msg);
     } else {
+      onClientDisconnect(client);
       client.reset();
 
       connections_.erase(
@@ -153,7 +149,6 @@ private:
   uint16_t port_;
 
   tcp::acceptor tcp_acceptor_;
-  std::function<void(std::shared_ptr<connection<Packets>>)> fail_callback_;
   uint32_t id_counter = 0;
 
 protected:

@@ -91,7 +91,7 @@ public:
 
 std::string aes;
 
-int main() {
+int main(int argc, char** argv) {
 
   // std::ostringstream _oss;
 
@@ -105,16 +105,23 @@ int main() {
   //     ostream_logger->set_level(spdlog::level::info);
   // }
   // spdlog::set_default_logger(ostream_logger);
-
   std::string uname, passwd, ip, port;
-  std::cout << "Enter username:    ";
-  std::getline(std::cin, uname);
-  std::cout << "Enter password:    ";
-  std::getline(std::cin, passwd);
-  std::cout << "Enter server IP:   ";
-  std::getline(std::cin, ip);
-  std::cout << "Enter server port: ";
-  std::getline(std::cin, port);
+  if (argc > 1) {
+    uname = argv[1];
+    passwd = "1234";
+    ip = "127.0.0.1";
+    port = "37549";
+  } else {
+
+    std::cout << "Enter username:    ";
+    std::getline(std::cin, uname);
+    std::cout << "Enter password:    ";
+    std::getline(std::cin, passwd);
+    std::cout << "Enter server IP:   ";
+    std::getline(std::cin, ip);
+    std::cout << "Enter server port: ";
+    std::getline(std::cin, port);
+  }
 
   Client c;
   c.connect(ip, std::stoi(port));

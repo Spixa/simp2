@@ -75,10 +75,6 @@ public:
     });
   }
 
-  void
-  set_fail_callback(std::function<void(std::shared_ptr<connection<T>>)> f) {
-    fail = f;
-  }
 
 public:
   enum class AuthState {
@@ -112,7 +108,6 @@ private:
                         } else {
                           spdlog::critical("Failed header write on " +
                                            std::to_string(id_));
-                          fail(this->shared_from_this());
                           socket_.close();
                         }
                       });
@@ -133,7 +128,6 @@ private:
                         } else {
                           spdlog::critical("Failed body write on " +
                                            std::to_string(id_));
-                          fail(this->shared_from_this());
                           socket_.close();
                         }
                       });
@@ -157,7 +151,6 @@ private: // reading
             }
           } else {
             spdlog::critical("Failed header read on " + std::to_string(id_));
-            fail(this->shared_from_this());
             socket_.close();
           }
         });
@@ -174,7 +167,6 @@ private: // reading
                        } else {
                          spdlog::critical("Failed body read on " +
                                           std::to_string(id_));
-                         fail(this->shared_from_this());
                          socket_.close();
                        }
                      });
