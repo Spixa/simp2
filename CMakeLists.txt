@@ -89,6 +89,7 @@ set(SIMPSERVER_SOURCES
   ${CMAKE_SOURCE_DIR}/src/server/main.cpp
   ${CMAKE_SOURCE_DIR}/src/server/server.cpp
   ${CMAKE_SOURCE_DIR}/src/server/setup.cpp
+  ${CMAKE_SOURCE_DIR}/src/server/server_interface.cpp
 )
 
 set(SIMPCLIENT_SOURCES

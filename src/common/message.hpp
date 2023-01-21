@@ -11,7 +11,7 @@
 
 namespace simp {
 
-void lex(std::string const &s, std::vector<std::string> &v, char lex) {
+static void lex(std::string const &s, std::vector<std::string> &v, char lex) {
   std::string temp = "";
 
   for (int i = 0; i < s.size(); ++i) {

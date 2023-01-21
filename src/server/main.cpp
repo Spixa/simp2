@@ -4,6 +4,9 @@
 #include <string>
 #include "setup.hpp"
 
+void startup_fail(std::exception const& e);
+void server_fail(std::exception const& e);
+
 int main(int argc, char **argv) {
   setup_logger();
 
@@ -22,10 +25,32 @@ int main(int argc, char **argv) {
     spdlog::warn("You are using an unrecommended and unsafe operating system (Microsoft Windows-any). Try using GNU/Linux");
   #endif
 
-  Server s{server_port};
-  s.start();
+  Server s{name, server_port};
 
-  while (true) {
-    s.update();
+  try {
+    s.start();
+  } catch (std::exception const& e) {
+    startup_fail(e);
+    exit(0);
   }
+
+  try {
+    while (true) {
+      s.update();
+    }
+  } catch (std::exception const& e) {
+    server_fail(e);
+    exit(0);
+  }
+}
+
+void startup_fail(std::exception const& e) {
+  spdlog::error("An startup error kept the server from launching");
+  spdlog::error(e.what());
+}
+
+
+void server_fail(std::exception const& e) {
+  spdlog::error("A server exception caused the server to fatally crash");
+  spdlog::error(e.what());
 }

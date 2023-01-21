@@ -129,7 +129,14 @@ int parse(uint16_t& port, std::string& version, std::string& name) {
     eDatabase->SetAttribute("dir", n.data());
     root->InsertEndChild(eDatabase);
 
-    fs::create_directory(n);
+    try {
+      fs::create_directory(n);
+      fs::create_directory(n + "/plugins");
+      fs::create_directory(n + "/db");
+    } catch (fs::filesystem_error e) {
+      spdlog::get("meta")->error("Filesystem error: " + std::string(e.what()));
+      exit(0);
+    }
 
     spdlog::get("meta")->info("Enabled simpserver_v2 protocol for this server");
 

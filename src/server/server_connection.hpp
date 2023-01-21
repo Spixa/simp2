@@ -23,10 +23,11 @@ public:
 
 public:
   connection(owner parent, asio::io_context &ctx, tcp::socket socket,
-             threadsafe::queue<owned_message<T>> &in)
-      : context_(ctx), socket_(std::move(socket)), message_in_queue_(in) {
+             threadsafe::queue<owned_message<T>> &in, std::function<void(std::shared_ptr<connection<T>>)> d)
+      : context_(ctx), socket_(std::move(socket)), message_in_queue_(in), onClientDisconnect(d) {
     owner_type_ = parent;
   }
+  
 
   virtual ~connection() {}
 
@@ -108,6 +109,7 @@ private:
                         } else {
                           spdlog::critical("Failed header write on " +
                                            std::to_string(id_));
+                          onClientDisconnect(this->shared_from_this());
                           socket_.close();
                         }
                       });
@@ -128,6 +130,7 @@ private:
                         } else {
                           spdlog::critical("Failed body write on " +
                                            std::to_string(id_));
+                          onClientDisconnect(this->shared_from_this());
                           socket_.close();
                         }
                       });
@@ -150,8 +153,8 @@ private: // reading
               add_to_incoming_message_queue();
             }
           } else {
-            spdlog::critical("Failed header read on " + std::to_string(id_));
             socket_.close();
+            onClientDisconnect(this->shared_from_this());
           }
         });
   }
@@ -167,6 +170,7 @@ private: // reading
                        } else {
                          spdlog::critical("Failed body read on " +
                                           std::to_string(id_));
+                         onClientDisconnect(this->shared_from_this());
                          socket_.close();
                        }
                      });
@@ -193,7 +197,7 @@ protected:
   owner owner_type_ = owner::server;
   uint32_t id_ = 0;
 
-  std::function<void(std::shared_ptr<connection<T>>)> fail;
+  std::function<void(std::shared_ptr<connection<T>>)> onClientDisconnect;
 
   message<T> temporary_in_message;
 };

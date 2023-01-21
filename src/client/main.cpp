@@ -1,34 +1,4 @@
 
-// #include <curses.h>
-
-// int main(void)
-// {
-//     bool done = FALSE;
-//     WINDOW *input, *output;
-//     char buffer[1024];
-
-//     initscr();
-//     cbreak();
-//     echo();
-//     input = newwin(1, COLS, LINES - 1, 0);
-//     output = newwin(LINES - 1, COLS, 0, 0);
-//     wmove(output, LINES - 2, 0);    /* start at the bottom */
-//     scrollok(output, TRUE);
-//     while (!done) {
-//       mvwprintw(input, 0, 0, "> ");
-//       if (wgetnstr(input, buffer, COLS - 4) != OK) {
-//           break;
-//       }
-//       werase(input);
-//       waddstr(output, buffer);
-//       waddch(output, '\n');   /* result from wgetnstr has no newline */
-//       wrefresh(output);
-//       done = (*buffer == 4);  /* quit on control-D */
-//     }
-//     endwin();
-//     return 0;
-// }
-
 #include "../common/message.hpp"
 #include "client.hpp"
 #include <atomic>
@@ -48,8 +18,8 @@
 
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #include "spdlog/logger.h"
-#include "spdlog/sinks/ostream_sink.h"
 #include "spdlog/spdlog.h"
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 using namespace simp;
 using namespace simp::cipher;
@@ -92,19 +62,11 @@ public:
 std::string aes;
 
 int main(int argc, char** argv) {
+  auto console = spdlog::stdout_color_mt("console");
 
-  // std::ostringstream _oss;
+  spdlog::set_default_logger(console);
+  spdlog::set_pattern("%^%L%$ > %v");
 
-  // auto ostream_logger = spdlog::get("console");
-  // if (!ostream_logger)
-  // {
-  //     auto ostream_sink =
-  //     std::make_shared<spdlog::sinks::ostream_sink_mt>(_oss); ostream_logger
-  //     = std::make_shared<spdlog::logger>("console", ostream_sink);
-  //     ostream_logger->set_pattern("%^%L%$ [%H:%M:%S %z] (%n) > %v");
-  //     ostream_logger->set_level(spdlog::level::info);
-  // }
-  // spdlog::set_default_logger(ostream_logger);
   std::string uname, passwd, ip, port;
   if (argc > 1) {
     uname = argv[1];

@@ -60,7 +60,7 @@ public:
         std::shared_ptr<connection<Packets>> newconn =
             std::make_shared<connection<Packets>>(
                 connection<Packets>::owner::server, io_context_,
-                std::move(socket), message_in_queue_);
+                std::move(socket), message_in_queue_, std::bind(&server_interface::onClientDisconnect, this, std::placeholders::_1));
 
         connections_.push_back(std::move(newconn));
         connections_.back()->connect_to_client(id_counter++);

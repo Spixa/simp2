@@ -1,7 +1,7 @@
 #include <memory>
 #include <vector>
 #include <deque>
-#include "../common//message.hpp"
+#include "../common/message.hpp"
 namespace simp {
   class CommandProcessor {
   public:
